@@ -1,5 +1,5 @@
 {
-  "app": "python cdk/app.py",
+  "app": "python3 cdk/app.py",
   "context": {
     "ses_from_address": "YOUR_FROM_ADDRESS@example.com",
     "to_addresses": "YOUR_TO_ADDRESS@example.com",

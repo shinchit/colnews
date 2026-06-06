@@ -1,6 +1,10 @@
+import logging
+
 import anthropic
 
 from fetchers import Article
+
+logger = logging.getLogger(__name__)
 
 
 def summarize(articles: list[Article], model: str, api_key: str) -> str:
@@ -18,8 +22,9 @@ def summarize(articles: list[Article], model: str, api_key: str) -> str:
             {
                 "role": "user",
                 "content": (
-                    "以下の技術ニュース記事を分析し、HTML形式で以下の3セクションを順番に出力してください。\n"
-                    "出力はHTMLタグを直接記述し、```html などのコードブロックで囲まないでください。\n\n"
+                    "以下の技術ニュース記事を分析してください。\n"
+                    "【重要】出力はHTMLタグのみを使用してください。マークダウン（#、##、**、- など）は絶対に使用しないでください。"
+                    "```html などのコードブロックも使用しないでください。\n\n"
                     "## セクション1: 今日のトレンド\n"
                     "<h2>今日のトレンド</h2> タグを使い、本日の記事全体を俯瞰した傾向を2〜3文で説明してください。"
                     "どんなトピックが多いか、業界の関心がどこに向いているかを簡潔にまとめてください。\n\n"
@@ -35,12 +40,33 @@ def summarize(articles: list[Article], model: str, api_key: str) -> str:
         ],
     )
     if message.stop_reason == "max_tokens":
-        import logging
-        logging.getLogger().warning("summarize: output was truncated (stop_reason=max_tokens)")
+        logger.warning("summarize: output was truncated (stop_reason=max_tokens)")
 
     text = message.content[0].text
+
+    # コードブロックを除去
     if text.startswith("```"):
         text = text.split("\n", 1)[-1]
     if text.endswith("```"):
         text = text.rsplit("```", 1)[0]
-    return text.strip()
+    text = text.strip()
+
+    # HTML タグが含まれていない場合（マークダウンで返ってきた場合）のフォールバック
+    if "<h2>" not in text and "<li>" not in text:
+        logger.warning("summarize: response does not contain HTML tags, converting plain text")
+        lines = text.splitlines()
+        html_lines = []
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith("## ") or line.startswith("# "):
+                heading = line.lstrip("#").strip()
+                html_lines.append(f"<h2>{heading}</h2>")
+            elif line.startswith("- ") or line.startswith("* "):
+                html_lines.append(f"<li>{line[2:]}</li>")
+            else:
+                html_lines.append(f"<p>{line}</p>")
+        text = "\n".join(html_lines)
+
+    return text

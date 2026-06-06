@@ -37,14 +37,16 @@ Lambda Function (Python 3.12, タイムアウト5分)
 
 各フェッチャーは独立した try/except で囲まれており、1ソースの失敗が全体に影響しない。
 
-| ソース | 取得方法 | URL |
-|--------|----------|-----|
+| ソース | 取得方法 | URL / API |
+|--------|----------|-----------|
 | Qiita | RSS (Atom) | `https://qiita.com/popular-items/feed.atom` |
 | Zenn | RSS | `https://zenn.dev/feed` |
 | はてなブックマーク | RSS | `https://b.hatena.ne.jp/hotentry/it.rss` |
 | Hacker News | JSON API | `https://hacker-news.firebaseio.com/v0/topstories.json` |
 | Reddit | JSON API | `https://www.reddit.com/r/{subreddit}.json` |
 | YouTube | RSS (XML) | `https://www.youtube.com/feeds/videos.xml?channel_id={id}` |
+| X/Twitter | Tavily Search API | `site:twitter.com` クエリで SEARCH_KEYWORDS を検索（1リクエスト/日） |
+| キーワードニュース | Tavily Search API | SEARCH_KEYWORDS を1件ずつ検索（キーワード数リクエスト/日） |
 
 各フェッチャーの返却形式:
 ```python
@@ -59,10 +61,14 @@ Lambda Function (Python 3.12, タイムアウト5分)
 - **出力:** カテゴリ別日本語ダイジェスト（HTML メール形式）
 - **カテゴリ:** AI/ML、Web開発、インフラ、セキュリティ、その他
 
-**トークン見積もり（MAX_ITEMS_PER_SOURCE=10、6ソース）:**
-- 入力: 約 6,000 トークン
+**トークン見積もり（MAX_ITEMS_PER_SOURCE=10、8ソース）:**
+- 入力: 約 8,000 トークン
 - 出力: 約 1,500 トークン
-- 月額コスト: 約 $0.09（Haiku 料金）
+- 月額コスト: 約 $0.12（Haiku 料金）
+
+**Tavily 無料枠の消費:**
+- 1日あたり: X検索1リクエスト + キーワード6リクエスト = 7リクエスト/日
+- 月30日: 約210リクエスト（無料枠1,000件の範囲内）
 
 ### メール送信（mailer.py）
 
@@ -95,7 +101,9 @@ colnews/
 │   │   ├── hatena.py
 │   │   ├── hackernews.py
 │   │   ├── reddit.py
-│   │   └── youtube.py
+│   │   ├── youtube.py
+│   │   ├── x_twitter.py        # Tavily 経由で X 投稿を検索
+│   │   └── keyword_news.py     # Tavily 経由でキーワードニュースを検索
 │   ├── summarizer.py
 │   ├── mailer.py
 │   └── requirements.txt
@@ -123,12 +131,15 @@ colnews/
 | `CLAUDE_MODEL` | 使用モデル ID | `claude-haiku-4-5-20251001` |
 | `YOUTUBE_CHANNEL_IDS` | 対象チャンネル ID（カンマ区切り） | — |
 | `REDDIT_SUBREDDITS` | 対象サブレディット（カンマ区切り） | `programming,tech` |
+| `TAVILY_API_KEY` | Secrets Manager から注入 | — |
+| `SEARCH_KEYWORDS` | 検索キーワード（カンマ区切り） | `AI,LLM,AWS,TypeScript,Claude,Gemini` |
 
 ## 前提条件
 
 - AWS アカウントで SES のサンドボックス解除済み（または送受信アドレスが検証済み）
 - CDK ブートストラップ済み（`cdk bootstrap`）
 - `ANTHROPIC_API_KEY` を AWS Secrets Manager に登録済み
+- `TAVILY_API_KEY` を AWS Secrets Manager に登録済み（Tavily アカウント作成・API キー取得済み）
 
 ## テスト方針
 

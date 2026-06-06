@@ -39,6 +39,7 @@ class ColnewsStack(cdk.Stack):
             runtime=lambda_.Runtime.PYTHON_3_12,
             index="handler.py",
             handler="main",
+            architecture=lambda_.Architecture.ARM_64,
             timeout=cdk.Duration.minutes(5),
             memory_size=512,
             environment={

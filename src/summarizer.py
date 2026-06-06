@@ -13,7 +13,7 @@ def summarize(articles: list[Article], model: str, api_key: str) -> str:
 
     message = client.messages.create(
         model=model,
-        max_tokens=4096,
+        max_tokens=8192,
         messages=[
             {
                 "role": "user",
@@ -34,6 +34,10 @@ def summarize(articles: list[Article], model: str, api_key: str) -> str:
             }
         ],
     )
+    if message.stop_reason == "max_tokens":
+        import logging
+        logging.getLogger().warning("summarize: output was truncated (stop_reason=max_tokens)")
+
     text = message.content[0].text
     if text.startswith("```"):
         text = text.split("\n", 1)[-1]

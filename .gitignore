@@ -9,3 +9,10 @@ cdk.out/
 .env
 dist/
 .DS_Store
+
+# Lambda build artifacts
+src/lambda.zip
+src/lambda_pkg/
+
+# Downloaded installers
+*.pkg

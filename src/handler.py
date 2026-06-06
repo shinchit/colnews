@@ -1,4 +1,5 @@
 import logging
+import re
 import os
 from datetime import date
 
@@ -10,6 +11,70 @@ from fetchers import hackernews, hatena, keyword_news, qiita, reddit, x_twitter,
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+
+def _inline_digest_styles(digest: str) -> str:
+    """Claude 生成の HTML タグにインラインスタイルを付与する（メールクライアント互換）。"""
+    h2_style = (
+        "font-size:17px;font-weight:700;color:#1a1a2e;"
+        "margin:28px 0 12px;padding:8px 14px;"
+        "background-color:#f0f4ff;border-left:4px solid #0f3460;"
+    )
+    li_style = (
+        "padding:10px 12px;margin-bottom:6px;"
+        "background-color:#f9fafc;border:1px solid #e8ecf0;"
+        "border-radius:6px;font-size:14px;line-height:1.6;list-style:none;"
+    )
+    a_style = "color:#0f3460;text-decoration:none;font-weight:500;"
+    p_style = "margin:0 0 12px;color:#4a5568;font-size:15px;line-height:1.7;"
+    ul_style = "margin:8px 0 16px;padding-left:0;"
+
+    digest = re.sub(r"<h2([^>]*)>", f'<h2\\1 style="{h2_style}">', digest)
+    digest = re.sub(r"<li([^>]*)>", f'<li\\1 style="{li_style}">', digest)
+    digest = re.sub(r"<a([^>]*)>", f'<a\\1 style="{a_style}">', digest)
+    digest = re.sub(r"<p([^>]*)>", f'<p\\1 style="{p_style}">', digest)
+    digest = re.sub(r"<ul([^>]*)>", f'<ul\\1 style="{ul_style}">', digest)
+    return digest
+
+
+def _build_html_email(digest: str, today: str) -> str:
+    styled_digest = _inline_digest_styles(digest)
+    return f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8;">
+    <tr><td align="center" style="padding:24px 16px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+        <tr>
+          <td style="background-color:#0f3460;padding:28px 32px 24px;text-align:center;">
+            <p style="margin:0 0 4px;color:#a8c4e0;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Tech News Digest</p>
+            <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">技術ニュースダイジェスト</h1>
+            <p style="margin:8px 0 0;color:#7ec8e3;font-size:13px;">{today}</p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:28px 32px;">
+            {styled_digest}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="background-color:#f0f4ff;padding:14px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+            <p style="margin:0;color:#718096;font-size:12px;">colnews &mdash; Powered by Claude AI &amp; AWS Lambda</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
 
 
 def _get_secret(secret_arn: str) -> str:
@@ -58,7 +123,7 @@ def main(event, context):
     today = date.today().strftime("%Y年%m月%d日")
     mailer.send_email(
         subject=f"技術ニュースダイジェスト {today}",
-        body_html=f"<html><body>{digest}</body></html>",
+        body_html=_build_html_email(digest, today),
         from_addr=from_addr,
         to_addrs=to_addrs,
     )

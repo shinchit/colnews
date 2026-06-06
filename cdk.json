@@ -1,0 +1,12 @@
+{
+  "app": "python cdk/app.py",
+  "context": {
+    "ses_from_address": "YOUR_FROM_ADDRESS@example.com",
+    "to_addresses": "YOUR_TO_ADDRESS@example.com",
+    "youtube_channel_ids": "",
+    "reddit_subreddits": "programming,tech",
+    "search_keywords": "AI,LLM,AWS,TypeScript,Claude,Gemini",
+    "anthropic_secret_name": "colnews/anthropic-api-key",
+    "tavily_secret_name": "colnews/tavily-api-key"
+  }
+}
